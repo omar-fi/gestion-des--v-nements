@@ -1,0 +1,29 @@
+<div class="admin-dashboard">
+  <h2>Tableau de bord Administrateur</h2>
+  
+  <div class="section">
+    <h3>Gestion des utilisateurs</h3>
+    <div class="user-list">
+      <div *ngFor="let user of users" class="user-card">
+        <div class="user-info">
+          <span class="username">{{ user.username }}</span>
+          <span class="user-type">{{ user.type }}</span>
+        </div>
+        <button (click)="deleteUser(user)" class="delete-btn">Supprimer</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h3>Gestion des événements</h3>
+    <div class="event-list">
+      <div *ngFor="let event of events" class="event-card">
+        <div class="event-info">
+          <span class="event-name">{{ event.name }}</span>
+          <span class="event-date">{{ event.date | date:'medium' }}</span>
+        </div>
+        <button (click)="deleteEvent(event)" class="delete-btn">Supprimer</button>
+      </div>
+    </div>
+  </div>
+</div> 

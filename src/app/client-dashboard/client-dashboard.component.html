@@ -1,0 +1,15 @@
+<div class="dashboard-container">
+  <h2>Tableau de bord Client</h2>
+  
+  <div class="events-grid">
+    <div class="event-card" *ngFor="let event of events">
+      <img [src]="event.photo" alt="Event photo">
+      <div class="event-info">
+        <h3>{{ event.name }}</h3>
+        <p class="description">{{ event.description }}</p>
+        <p class="date">Date: {{ event.date | date:'medium' }}</p>
+        <button class="register-btn">S'inscrire</button>
+      </div>
+    </div>
+  </div>
+</div> 
