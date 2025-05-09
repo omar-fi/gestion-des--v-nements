@@ -1,8 +1,8 @@
-import { Component } from '@angular/core';
+import { Component, ViewChild } from '@angular/core';
 import { Router } from '@angular/router';
-import { FormsModule } from '@angular/forms';
+import { FormsModule, NgForm } from '@angular/forms';
 import { CommonModule } from '@angular/common';
-import { UserService } from '../services/user.service';
+import { UserService, User } from '../services/user.service';
 
 @Component({
   selector: 'app-register',
@@ -12,36 +12,55 @@ import { UserService } from '../services/user.service';
   styleUrls: ['./register.component.css']
 })
 export class RegisterComponent {
-  username: string = '';
+  @ViewChild('registerForm') registerForm!: NgForm;
+  email: string = '';
   password: string = '';
   confirmPassword: string = '';
-  userType: 'organizer' | 'client' = 'client';
+  role: 'organizer' | 'client' = 'client';
   errorMessage: string = '';
+  isLoading: boolean = false;
 
   constructor(
-    public router: Router,
-    private userService: UserService
+    private userService: UserService,
+    private router: Router
   ) {}
 
-  register() {
-    if (this.password !== this.confirmPassword) {
-      this.errorMessage = 'Les mots de passe ne correspondent pas';
-      return;
-    }
+  onSubmit() {
+    if (this.registerForm.valid) {
+      this.isLoading = true;
+      this.errorMessage = '';
 
-    this.userService.register({
-      username: this.username,
-      password: this.password,
-      type: this.userType
-    }).subscribe({
-      next: (user) => {
-        if (user) {
-          this.router.navigate(['/login']);
-        }
-      },
-      error: (error) => {
-        this.errorMessage = error.message || 'Une erreur est survenue lors de l\'inscription';
+      // Vérifier que les mots de passe correspondent
+      if (this.password !== this.confirmPassword) {
+        this.errorMessage = 'Les mots de passe ne correspondent pas';
+        this.isLoading = false;
+        return;
       }
-    });
+
+      // Créer l'objet utilisateur sans l'ID (le service s'en chargera)
+      const userData = {
+        username: this.email,
+        password: this.password,
+        type: this.role
+      };
+
+      this.userService.register(userData).subscribe({
+        next: (user) => {
+          this.errorMessage = 'Compte créé avec succès ! Connexion en cours...';
+          // Attendre un peu avant de rediriger pour que l'utilisateur voie le message
+          setTimeout(() => {
+            this.goToLogin();
+          }, 2000);
+        },
+        error: (error) => {
+          this.errorMessage = error.message || 'Une erreur est survenue lors de l\'inscription';
+          this.isLoading = false;
+        }
+      });
+    }
+  }
+
+  goToLogin() {
+    this.router.navigate(['/login']);
   }
 } 

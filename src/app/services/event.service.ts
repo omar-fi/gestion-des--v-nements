@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { BehaviorSubject, Observable } from 'rxjs';
+import { BehaviorSubject, Observable, of } from 'rxjs';
 import { UserService, User } from './user.service';
 
 export interface Event {
@@ -72,7 +72,30 @@ export class EventService {
   }
 
   getEvents(): Observable<Event[]> {
-    return this.eventsSubject.asObservable();
+    const currentUser = this.userService.getCurrentUser();
+    if (!currentUser) {
+      return of([]);
+    }
+
+    let filteredEvents: Event[];
+    switch (currentUser.type) {
+      case 'admin':
+        // L'admin voit tous les événements
+        filteredEvents = [...this.events];
+        break;
+      case 'client':
+        // Les clients ne voient que les événements approuvés
+        filteredEvents = this.events.filter(e => e.status === 'approved');
+        break;
+      case 'organizer':
+        // Les organisateurs voient leurs propres événements
+        filteredEvents = this.events.filter(e => e.organizerId === currentUser.id);
+        break;
+      default:
+        filteredEvents = [];
+    }
+
+    return of(filteredEvents);
   }
 
   getPendingEvents(): Observable<Event[]> {

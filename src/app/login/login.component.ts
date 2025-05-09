@@ -1,8 +1,8 @@
-import { Component } from '@angular/core';
+import { Component, ViewChild } from '@angular/core';
 import { Router } from '@angular/router';
-import { FormsModule } from '@angular/forms';
+import { FormsModule, NgForm } from '@angular/forms';
 import { CommonModule } from '@angular/common';
-import { UserService } from '../services/user.service';
+import { UserService, User } from '../services/user.service';
 
 @Component({
   selector: 'app-login',
@@ -12,9 +12,10 @@ import { UserService } from '../services/user.service';
   styleUrls: ['./login.component.css']
 })
 export class LoginComponent {
+  @ViewChild('loginForm') loginForm!: NgForm;
   email: string = '';
   password: string = '';
-  role: string = '';
+  role: 'admin' | 'organizer' | 'client' = 'client';
   errorMessage: string = '';
   isLoading: boolean = false;
 
@@ -29,7 +30,7 @@ export class LoginComponent {
     }
   }
 
-  private redirectBasedOnUserType(userType: string) {
+  private redirectBasedOnUserType(userType: 'admin' | 'organizer' | 'client') {
     switch (userType) {
       case 'admin':
         this.router.navigate(['/admin-dashboard']);
@@ -46,60 +47,28 @@ export class LoginComponent {
   }
 
   onSubmit() {
-    if (!this.email || !this.password || !this.role) {
-      this.errorMessage = 'Veuillez remplir tous les champs';
-      return;
-    }
+    if (this.loginForm.valid) {
+      this.isLoading = true;
+      this.errorMessage = '';
 
-    this.isLoading = true;
-    this.errorMessage = '';
-
-    this.userService.login(this.email, this.password, this.role).subscribe({
-      next: (response) => {
-        this.isLoading = false;
-        if (response.success) {
-          switch (this.role) {
-            case 'admin':
-              this.router.navigate(['/admin-dashboard']);
-              break;
-            case 'organizer':
-              this.router.navigate(['/organizer-dashboard']);
-              break;
-            case 'client':
-              this.router.navigate(['/client-dashboard']);
-              break;
+      this.userService.login(this.email, this.password).subscribe({
+        next: (user) => {
+          if (user && user.type === this.role) {
+            this.redirectBasedOnUserType(user.type);
+          } else {
+            this.errorMessage = 'Identifiants invalides ou rôle incorrect';
           }
-        } else {
-          this.errorMessage = response.message || 'Erreur de connexion';
+          this.isLoading = false;
+        },
+        error: (error) => {
+          this.errorMessage = error.message || 'Une erreur est survenue';
+          this.isLoading = false;
         }
-      },
-      error: (error) => {
-        this.isLoading = false;
-        this.errorMessage = 'Une erreur est survenue lors de la connexion';
-        console.error('Login error:', error);
-      }
-    });
+      });
+    }
   }
 
-  register() {
-    if (!this.email || !this.password) {
-      this.errorMessage = 'Veuillez remplir tous les champs';
-      return;
-    }
-
-    this.userService.register({
-      username: this.email,
-      password: this.password,
-      type: this.role
-    }).subscribe({
-      next: (user) => {
-        if (user) {
-          this.onSubmit();
-        }
-      },
-      error: (error) => {
-        this.errorMessage = error.message || 'Une erreur est survenue lors de l\'inscription';
-      }
-    });
+  goToRegister() {
+    this.router.navigate(['/register']);
   }
 } 

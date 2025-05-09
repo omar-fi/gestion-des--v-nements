@@ -1,37 +1,108 @@
 <div class="register-container">
-  <h2>Inscription</h2>
-  
-  <div *ngIf="errorMessage" class="error-message">
-    {{ errorMessage }}
+  <div class="register-card">
+    <div class="register-header">
+      <h2>Créer un compte</h2>
+      <p>Rejoignez notre plateforme d'événements</p>
+    </div>
+    
+    <form (ngSubmit)="onSubmit()" #registerForm="ngForm" class="register-form">
+      <div class="form-group">
+        <label for="email">Email</label>
+        <input 
+          type="email" 
+          id="email" 
+          name="email" 
+          [(ngModel)]="email" 
+          required 
+          email 
+          #emailInput="ngModel"
+          class="form-control"
+          [class.is-invalid]="emailInput.invalid && emailInput.touched"
+          placeholder="Entrez votre email">
+        <div class="error-message" *ngIf="emailInput.invalid && emailInput.touched">
+          <span *ngIf="emailInput.errors?.['required']">L'email est requis</span>
+          <span *ngIf="emailInput.errors?.['email']">Format d'email invalide</span>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="password">Mot de passe</label>
+        <input 
+          type="password" 
+          id="password" 
+          name="password" 
+          [(ngModel)]="password" 
+          required 
+          minlength="6"
+          #passwordInput="ngModel"
+          class="form-control"
+          [class.is-invalid]="passwordInput.invalid && passwordInput.touched"
+          placeholder="Entrez votre mot de passe">
+        <div class="error-message" *ngIf="passwordInput.invalid && passwordInput.touched">
+          <span *ngIf="passwordInput.errors?.['required']">Le mot de passe est requis</span>
+          <span *ngIf="passwordInput.errors?.['minlength']">Le mot de passe doit contenir au moins 6 caractères</span>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="confirmPassword">Confirmer le mot de passe</label>
+        <input 
+          type="password" 
+          id="confirmPassword" 
+          name="confirmPassword" 
+          [(ngModel)]="confirmPassword" 
+          required 
+          #confirmPasswordInput="ngModel"
+          class="form-control"
+          [class.is-invalid]="confirmPasswordInput.invalid && confirmPasswordInput.touched"
+          placeholder="Confirmez votre mot de passe">
+        <div class="error-message" *ngIf="confirmPasswordInput.invalid && confirmPasswordInput.touched">
+          <span *ngIf="confirmPasswordInput.errors?.['required']">La confirmation du mot de passe est requise</span>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="role">Type de compte</label>
+        <select 
+          id="role" 
+          name="role" 
+          [(ngModel)]="role" 
+          required
+          #roleInput="ngModel"
+          class="form-control"
+          [class.is-invalid]="roleInput.invalid && roleInput.touched">
+          <option value="">Sélectionnez votre type de compte</option>
+          <option value="organizer">Organisateur d'événements</option>
+          <option value="client">Participant</option>
+        </select>
+        <div class="error-message" *ngIf="roleInput.invalid && roleInput.touched">
+          <span>Le type de compte est requis</span>
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button 
+          type="submit" 
+          class="btn btn-primary"
+          [disabled]="isLoading">
+          <span *ngIf="!isLoading">Créer un compte</span>
+          <span *ngIf="isLoading">Création en cours...</span>
+        </button>
+      </div>
+
+      <div class="form-footer">
+        <p>Vous avez déjà un compte ?</p>
+        <button 
+          type="button" 
+          class="btn btn-secondary"
+          (click)="goToLogin()">
+          Se connecter
+        </button>
+      </div>
+
+      <div class="error-message" *ngIf="errorMessage">
+        {{ errorMessage }}
+      </div>
+    </form>
   </div>
-
-  <form (ngSubmit)="register()">
-    <div class="form-group">
-      <label for="username">Nom d'utilisateur</label>
-      <input type="text" id="username" [(ngModel)]="username" name="username" required>
-    </div>
-    
-    <div class="form-group">
-      <label for="password">Mot de passe</label>
-      <input type="password" id="password" [(ngModel)]="password" name="password" required>
-    </div>
-
-    <div class="form-group">
-      <label for="confirmPassword">Confirmer le mot de passe</label>
-      <input type="password" id="confirmPassword" [(ngModel)]="confirmPassword" name="confirmPassword" required>
-    </div>
-    
-    <div class="form-group">
-      <label for="userType">Type d'utilisateur</label>
-      <select id="userType" [(ngModel)]="userType" name="userType">
-        <option value="organizer">Organisateur</option>
-        <option value="client">Client</option>
-      </select>
-    </div>
-    
-    <div class="button-group">
-      <button type="submit" class="register-btn">S'inscrire</button>
-      <button type="button" (click)="router.navigate(['/login'])" class="login-btn">Retour à la connexion</button>
-    </div>
-  </form>
 </div> 
