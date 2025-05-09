@@ -12,49 +12,93 @@ import { UserService } from '../services/user.service';
   styleUrls: ['./login.component.css']
 })
 export class LoginComponent {
-  username: string = '';
+  email: string = '';
   password: string = '';
-  userType: 'organizer' | 'client' = 'client';
+  role: string = '';
   errorMessage: string = '';
-  isAdminLogin: boolean = false;
+  isLoading: boolean = false;
 
   constructor(
-    public router: Router,
-    private userService: UserService
-  ) {}
-
-  login() {
-    if (this.isAdminLogin) {
-      // Vérification des identifiants admin
-      if (this.username === 'admin' && this.password === 'admin123') {
-        this.router.navigate(['/admin-dashboard']);
-      } else {
-        this.errorMessage = 'Identifiants admin incorrects';
-      }
-    } else {
-      this.userService.login(this.username, this.password).subscribe(user => {
-        if (user) {
-          const userType = user.type as 'organizer' | 'client';
-          if (userType === 'organizer') {
-            this.router.navigate(['/organizer-dashboard']);
-          } else if (userType === 'client') {
-            this.router.navigate(['/client-dashboard']);
-          }
-        } else {
-          this.errorMessage = 'Nom d\'utilisateur ou mot de passe incorrect';
-        }
-      });
+    private userService: UserService,
+    private router: Router
+  ) {
+    // Vérifier si l'utilisateur est déjà connecté
+    const currentUser = this.userService.getCurrentUser();
+    if (currentUser) {
+      this.redirectBasedOnUserType(currentUser.type);
     }
   }
 
+  private redirectBasedOnUserType(userType: string) {
+    switch (userType) {
+      case 'admin':
+        this.router.navigate(['/admin-dashboard']);
+        break;
+      case 'organizer':
+        this.router.navigate(['/organizer-dashboard']);
+        break;
+      case 'client':
+        this.router.navigate(['/client-dashboard']);
+        break;
+      default:
+        this.router.navigate(['/login']);
+    }
+  }
+
+  onSubmit() {
+    if (!this.email || !this.password || !this.role) {
+      this.errorMessage = 'Veuillez remplir tous les champs';
+      return;
+    }
+
+    this.isLoading = true;
+    this.errorMessage = '';
+
+    this.userService.login(this.email, this.password, this.role).subscribe({
+      next: (response) => {
+        this.isLoading = false;
+        if (response.success) {
+          switch (this.role) {
+            case 'admin':
+              this.router.navigate(['/admin-dashboard']);
+              break;
+            case 'organizer':
+              this.router.navigate(['/organizer-dashboard']);
+              break;
+            case 'client':
+              this.router.navigate(['/client-dashboard']);
+              break;
+          }
+        } else {
+          this.errorMessage = response.message || 'Erreur de connexion';
+        }
+      },
+      error: (error) => {
+        this.isLoading = false;
+        this.errorMessage = 'Une erreur est survenue lors de la connexion';
+        console.error('Login error:', error);
+      }
+    });
+  }
+
   register() {
+    if (!this.email || !this.password) {
+      this.errorMessage = 'Veuillez remplir tous les champs';
+      return;
+    }
+
     this.userService.register({
-      username: this.username,
+      username: this.email,
       password: this.password,
-      type: this.userType
-    }).subscribe(user => {
-      if (user) {
-        this.login();
+      type: this.role
+    }).subscribe({
+      next: (user) => {
+        if (user) {
+          this.onSubmit();
+        }
+      },
+      error: (error) => {
+        this.errorMessage = error.message || 'Une erreur est survenue lors de l\'inscription';
       }
     });
   }

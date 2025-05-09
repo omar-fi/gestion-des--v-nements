@@ -1,35 +1,82 @@
 <div class="login-container">
-  <div class="tabs">
-    <button [class.active]="!isAdminLogin" (click)="isAdminLogin = false">Connexion Utilisateur</button>
-    <button [class.active]="isAdminLogin" (click)="isAdminLogin = true">Connexion Admin</button>
-  </div>
+  <div class="login-card">
+    <div class="login-header">
+      <h2>Connexion</h2>
+      <p>Bienvenue sur notre plateforme d'événements</p>
+    </div>
+    
+    <form (ngSubmit)="onSubmit()" #loginForm="ngForm" class="login-form">
+      <div class="form-group">
+        <label for="email">Email</label>
+        <input 
+          type="email" 
+          id="email" 
+          name="email" 
+          [(ngModel)]="email" 
+          required 
+          email 
+          #emailInput="ngModel"
+          class="form-control"
+          [class.is-invalid]="emailInput.invalid && emailInput.touched"
+          placeholder="Entrez votre email">
+        <div class="error-message" *ngIf="emailInput.invalid && emailInput.touched">
+          <span *ngIf="emailInput.errors?.['required']">L'email est requis</span>
+          <span *ngIf="emailInput.errors?.['email']">Format d'email invalide</span>
+        </div>
+      </div>
 
-  <div *ngIf="errorMessage" class="error-message">
-    {{ errorMessage }}
-  </div>
+      <div class="form-group">
+        <label for="password">Mot de passe</label>
+        <input 
+          type="password" 
+          id="password" 
+          name="password" 
+          [(ngModel)]="password" 
+          required 
+          minlength="6"
+          #passwordInput="ngModel"
+          class="form-control"
+          [class.is-invalid]="passwordInput.invalid && passwordInput.touched"
+          placeholder="Entrez votre mot de passe">
+        <div class="error-message" *ngIf="passwordInput.invalid && passwordInput.touched">
+          <span *ngIf="passwordInput.errors?.['required']">Le mot de passe est requis</span>
+          <span *ngIf="passwordInput.errors?.['minlength']">Le mot de passe doit contenir au moins 6 caractères</span>
+        </div>
+      </div>
 
-  <form (ngSubmit)="login()">
-    <div class="form-group">
-      <label for="username">Nom d'utilisateur</label>
-      <input type="text" id="username" [(ngModel)]="username" name="username" required>
-    </div>
-    
-    <div class="form-group">
-      <label for="password">Mot de passe</label>
-      <input type="password" id="password" [(ngModel)]="password" name="password" required>
-    </div>
-    
-    <div class="form-group" *ngIf="!isAdminLogin">
-      <label for="userType">Type d'utilisateur</label>
-      <select id="userType" [(ngModel)]="userType" name="userType">
-        <option value="organizer">Organisateur</option>
-        <option value="client">Client</option>
-      </select>
-    </div>
-    
-    <div class="button-group">
-      <button type="submit" class="login-btn">Se connecter</button>
-      <button *ngIf="!isAdminLogin" type="button" (click)="router.navigate(['/register'])" class="register-btn">S'inscrire</button>
-    </div>
-  </form>
+      <div class="form-group">
+        <label for="role">Rôle</label>
+        <select 
+          id="role" 
+          name="role" 
+          [(ngModel)]="role" 
+          required
+          #roleInput="ngModel"
+          class="form-control"
+          [class.is-invalid]="roleInput.invalid && roleInput.touched">
+          <option value="">Sélectionnez votre rôle</option>
+          <option value="admin">Administrateur</option>
+          <option value="organizer">Organisateur</option>
+          <option value="client">Client</option>
+        </select>
+        <div class="error-message" *ngIf="roleInput.invalid && roleInput.touched">
+          <span>Le rôle est requis</span>
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button 
+          type="submit" 
+          class="btn btn-primary"
+          [disabled]="loginForm.invalid || isLoading">
+          <span *ngIf="!isLoading">Se connecter</span>
+          <span *ngIf="isLoading">Connexion en cours...</span>
+        </button>
+      </div>
+
+      <div class="error-message" *ngIf="errorMessage">
+        {{ errorMessage }}
+      </div>
+    </form>
+  </div>
 </div> 

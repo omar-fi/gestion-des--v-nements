@@ -25,31 +25,48 @@ export class EventService {
     private http: HttpClient,
     private userService: UserService
   ) {
-    // Pour l'instant, nous utilisons des données en mémoire
-    this.events = [
-      {
-        id: 1,
-        name: 'Concert de Jazz',
-        description: 'Un concert de jazz exceptionnel',
-        date: new Date('2024-06-15T20:00:00'),
-        photo: 'assets/jazz-concert.jpg',
-        status: 'pending',
-        organizerId: 1
-      }
-    ];
+    // Charger les événements depuis le localStorage
+    const storedEvents = localStorage.getItem('events');
+    if (storedEvents) {
+      this.events = JSON.parse(storedEvents).map((event: any) => ({
+        ...event,
+        date: new Date(event.date)
+      }));
+      this.eventsSubject.next(this.events);
+    }
+  }
+
+  private saveEvents() {
+    localStorage.setItem('events', JSON.stringify(this.events));
     this.eventsSubject.next(this.events);
   }
 
   createEvent(event: Omit<Event, 'id' | 'status'>): Observable<Event> {
     const newEvent: Event = {
       ...event,
-      id: this.events.length + 1,
+      id: Date.now(), // Utiliser timestamp comme ID unique
       status: 'pending'
     };
     this.events.push(newEvent);
-    this.eventsSubject.next(this.events);
+    this.saveEvents();
     return new Observable(subscriber => {
       subscriber.next(newEvent);
+      subscriber.complete();
+    });
+  }
+
+  updateEvent(event: Event): Observable<Event> {
+    const index = this.events.findIndex(e => e.id === event.id);
+    if (index !== -1) {
+      this.events[index] = event;
+      this.saveEvents();
+      return new Observable(subscriber => {
+        subscriber.next(event);
+        subscriber.complete();
+      });
+    }
+    return new Observable(subscriber => {
+      subscriber.error('Event not found');
       subscriber.complete();
     });
   }
@@ -69,7 +86,7 @@ export class EventService {
     const event = this.events.find(e => e.id === eventId);
     if (event) {
       event.status = 'approved';
-      this.eventsSubject.next(this.events);
+      this.saveEvents();
     }
     return new Observable(subscriber => {
       subscriber.next(event || null);
@@ -81,10 +98,33 @@ export class EventService {
     const event = this.events.find(e => e.id === eventId);
     if (event) {
       event.status = 'rejected';
-      this.eventsSubject.next(this.events);
+      this.saveEvents();
     }
     return new Observable(subscriber => {
       subscriber.next(event || null);
+      subscriber.complete();
+    });
+  }
+
+  getEventsByOrganizer(organizerId: number): Observable<Event[]> {
+    return new Observable(subscriber => {
+      subscriber.next(this.events.filter(e => e.organizerId === organizerId));
+      subscriber.complete();
+    });
+  }
+
+  deleteEvent(eventId: number): Observable<boolean> {
+    const index = this.events.findIndex(e => e.id === eventId);
+    if (index !== -1) {
+      this.events.splice(index, 1);
+      this.saveEvents();
+      return new Observable(subscriber => {
+        subscriber.next(true);
+        subscriber.complete();
+      });
+    }
+    return new Observable(subscriber => {
+      subscriber.next(false);
       subscriber.complete();
     });
   }
