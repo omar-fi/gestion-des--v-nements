@@ -67,8 +67,11 @@ export class LoginComponent {
       });
     }
   }
+  options = {
+    path: 'assets/angular-logo-animation.json', // your Lottie file
+  };
 
   goToRegister() {
     this.router.navigate(['/register']);
   }
-} 
+}
