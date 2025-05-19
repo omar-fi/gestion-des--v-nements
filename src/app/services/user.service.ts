@@ -1,13 +1,6 @@
 import { Injectable } from '@angular/core';
-import { Observable, of } from 'rxjs';
-import { BehaviorSubject } from 'rxjs';
-
-export interface User {
-  id: number;
-  username: string;
-  password: string;
-  type: 'admin' | 'organizer' | 'client';
-}
+import { BehaviorSubject, Observable, of, throwError } from 'rxjs';
+import { User } from '../models/user.model';
 
 @Injectable({
   providedIn: 'root'
@@ -26,6 +19,9 @@ export class UserService {
   public currentUser$ = this.currentUserSubject.asObservable();
 
   constructor() {
+    // Forcer la déconnexion au démarrage
+    this.logout();
+    
     // Charger les utilisateurs depuis le localStorage
     const storedUsers = localStorage.getItem('users');
     if (storedUsers) {
@@ -41,7 +37,15 @@ export class UserService {
     // Vérifier si un utilisateur est déjà connecté
     const storedUser = localStorage.getItem('currentUser');
     if (storedUser) {
-      this.currentUserSubject.next(JSON.parse(storedUser));
+      const user = JSON.parse(storedUser);
+      // Vérifier si l'utilisateur existe toujours dans la liste des utilisateurs
+      const userExists = this.users.some(u => u.id === user.id && u.username === user.username);
+      if (userExists) {
+        this.currentUserSubject.next(user);
+      } else {
+        // Si l'utilisateur n'existe plus, le déconnecter
+        this.logout();
+      }
     }
   }
 
@@ -53,23 +57,19 @@ export class UserService {
   }
 
   register(user: Omit<User, 'id'>): Observable<User> {
-    // Vérifier si l'utilisateur existe déjà
     if (this.users.find(u => u.username === user.username)) {
-      throw new Error('Ce nom d\'utilisateur est déjà pris');
+      return throwError(() => new Error('Ce nom d\'utilisateur est déjà pris'));
     }
     
-    // Empêcher la création d'un compte admin
     if (user.type === 'admin') {
-      throw new Error('La création de compte administrateur n\'est pas autorisée');
+      return throwError(() => new Error('La création de compte administrateur n\'est pas autorisée'));
     }
     
-    // Créer un nouvel utilisateur avec un ID unique
     const newUser: User = {
       ...user,
-      id: Date.now() // Utiliser timestamp comme ID unique
+      id: Date.now()
     };
     
-    // Ajouter le nouvel utilisateur
     this.users.push(newUser);
     this.saveUsers();
     return of(newUser);
@@ -93,8 +93,10 @@ export class UserService {
     if (user) {
       this.currentUserSubject.next(user);
       localStorage.setItem('currentUser', JSON.stringify(user));
+      return of(user);
     }
-    return of(user || null);
+    
+    return of(null);
   }
 
   logout() {
@@ -103,7 +105,19 @@ export class UserService {
   }
 
   getCurrentUser(): User | null {
-    return this.currentUserSubject.value;
+    const user = this.currentUserSubject.value;
+    if (!user) {
+      return null;
+    }
+    
+    // Vérifier si l'utilisateur existe toujours dans la liste des utilisateurs
+    const userExists = this.users.some(u => u.id === user.id && u.username === user.username);
+    if (!userExists) {
+      this.logout();
+      return null;
+    }
+    
+    return user;
   }
 
   getUsers(): Observable<User[]> {

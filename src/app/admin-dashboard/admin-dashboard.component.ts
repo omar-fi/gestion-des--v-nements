@@ -12,7 +12,6 @@ import { EventService, Event } from '../services/event.service';
     <div class="dashboard-container">
       <header>
         <h1>Dashboard Administrateur</h1>
-        <button (click)="logout()" class="logout-btn">Déconnexion</button>
       </header>
       
       <div class="content">
@@ -59,19 +58,6 @@ import { EventService, Event } from '../services/event.service';
       margin-bottom: 30px;
       padding-bottom: 20px;
       border-bottom: 1px solid #eee;
-    }
-    
-    .logout-btn {
-      padding: 8px 16px;
-      background-color: #dc3545;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-    }
-    
-    .logout-btn:hover {
-      background-color: #c82333;
     }
 
     .content {
@@ -258,10 +244,5 @@ export class AdminDashboardComponent implements OnInit {
         this.loadEvents();
       });
     }
-  }
-
-  logout() {
-    this.userService.logout();
-    this.router.navigate(['/login']);
   }
 } 

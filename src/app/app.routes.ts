@@ -27,5 +27,6 @@ export const routes: Routes = [
     component: OrganizerDashboardComponent,
     canActivate: [authGuard],
     data: { roles: ['organizer'] }
-  }
+  },
+  { path: '**', redirectTo: '/login' }
 ];
