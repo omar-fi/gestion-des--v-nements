@@ -41,77 +41,30 @@ import { EventService, Event } from '../services/event.service';
       <div class="dashboard-content">
         <section class="create-event-section">
           <h2>Créer un nouvel événement</h2>
-          <form (ngSubmit)="onSubmit()" class="event-form">
+          <form (submit)="onSubmit()">
             <div class="form-group">
-              <label for="name">
-                <i class="fas fa-heading"></i>
-                Nom de l'événement
-              </label>
-              <input 
-                type="text" 
-                id="name" 
-                [(ngModel)]="eventFormData.name" 
-                name="name" 
-                required
-                placeholder="Entrez le nom de l'événement"
-              >
+              <label for="name">Nom de l'événement</label>
+              <input type="text" id="name" [(ngModel)]="eventFormData.name" name="name" required>
             </div>
-            
             <div class="form-group">
-              <label for="description">
-                <i class="fas fa-align-left"></i>
-                Description
-              </label>
-              <textarea 
-                id="description" 
-                [(ngModel)]="eventFormData.description" 
-                name="description" 
-                required
-                placeholder="Décrivez votre événement"
-                rows="4"
-              ></textarea>
+              <label for="description">Description</label>
+              <textarea id="description" [(ngModel)]="eventFormData.description" name="description" required></textarea>
             </div>
-            
             <div class="form-group">
-              <label for="date">
-                <i class="fas fa-calendar"></i>
-                Date
-              </label>
-              <input 
-                type="datetime-local" 
-                id="date" 
-                [(ngModel)]="eventFormData.date" 
-                name="date" 
-                required
-              >
+              <label for="date">Date et heure</label>
+              <input type="datetime-local" id="date" [(ngModel)]="eventFormData.date" name="date" required>
             </div>
-            
             <div class="form-group">
-              <label for="photo">
-                <i class="fas fa-image"></i>
-                Photo
-              </label>
-              <div class="file-upload">
-                <input 
-                  type="file" 
-                  id="photo" 
-                  (change)="onFileSelected($event)" 
-                  accept="image/*"
-                  class="file-input"
-                >
-                <label for="photo" class="file-label">
-                  <i class="fas fa-cloud-upload-alt"></i>
-                  Choisir une image
-                </label>
-                <span class="file-name" *ngIf="eventFormData.photo">
-                  Image sélectionnée
-                </span>
-              </div>
+              <label for="location">Lieu</label>
+              <input type="text" id="location" [(ngModel)]="eventFormData.location" name="location" required>
             </div>
-            
+            <div class="form-group">
+              <label for="photo">Photo (URL)</label>
+              <input type="text" id="photo" [(ngModel)]="eventFormData.photo" name="photo">
+            </div>
             <button type="submit" class="submit-btn" [disabled]="isLoading">
-              <i class="fas" [ngClass]="isLoading ? 'fa-spinner fa-spin' : 'fa-plus'"></i>
-              {{ isLoading ? 'Création en cours...' : 'Créer l\'événement' }}
+              <i class="fas" [ngClass]="isLoading ? 'fa-spinner fa-spin' : 'fa-plus-circle'"></i>
+              {{ isLoading ? 'Création...' : 'Créer un événement' }}
             </button>
           </form>
         </section>
@@ -463,7 +416,8 @@ export class OrganizerDashboardComponent implements OnInit {
     name: '',
     description: '',
     date: new Date(),
-    photo: ''
+    photo: '',
+    location: ''
   };
   isLoading: boolean = false;
 
@@ -514,7 +468,8 @@ export class OrganizerDashboardComponent implements OnInit {
           name: '',
           description: '',
           date: new Date(),
-          photo: ''
+          photo: '',
+          location: ''
         };
         this.isLoading = false;
       },

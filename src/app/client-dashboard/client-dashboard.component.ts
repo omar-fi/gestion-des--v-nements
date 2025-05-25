@@ -1,17 +1,27 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { UserService } from '../services/user.service';
-import { EventService, Event } from '../services/event.service';
+import { EventService, Event, Ticket } from '../services/event.service';
+import { User } from '../models/user.model';
+import { TicketConfirmationModalComponent } from '../components/ticket-confirmation-modal/ticket-confirmation-modal.component';
 
 @Component({
   selector: 'app-client-dashboard',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, FormsModule, TicketConfirmationModalComponent],
   template: `
     <div class="dashboard-container">
       <div class="dashboard-header">
         <h1>Tableau de bord client</h1>
+        <div class="user-info">
+          <span>Bienvenue, {{ currentUser?.username }}</span>
+          <button class="btn btn-danger" (click)="logout()">
+            <i class="fas fa-sign-out-alt"></i>
+            Déconnexion
+          </button>
+        </div>
         <div class="stats">
           <div class="stat-card">
             <i class="fas fa-ticket-alt"></i>
@@ -23,8 +33,8 @@ import { EventService, Event } from '../services/event.service';
           <div class="stat-card">
             <i class="fas fa-calendar-check"></i>
             <div class="stat-info">
-              <span class="stat-value">{{ upcomingEvents.length }}</span>
-              <span class="stat-label">Événements à venir</span>
+              <span class="stat-value">{{ availableEvents.length }}</span>
+              <span class="stat-label">Événements disponibles</span>
             </div>
           </div>
         </div>
@@ -32,14 +42,14 @@ import { EventService, Event } from '../services/event.service';
 
       <div class="dashboard-content">
         <section class="events-section">
-          <h2>Événements à venir</h2>
-          <div class="events-grid">
-            <div *ngFor="let event of upcomingEvents" class="event-card">
+          <h2>Événements disponibles</h2>
+          <div class="events-grid" *ngIf="availableEvents.length > 0">
+            <div *ngFor="let event of availableEvents" class="event-card">
               <div class="event-image">
                 <img [src]="event.photo || 'assets/default-event.jpg'" [alt]="event.name">
                 <div class="event-date">
                   <i class="fas fa-calendar"></i>
-                  {{ event.date | date:'dd MMM yyyy' }}
+                  {{ event.date | date:'dd MMM yyyy, HH:mm' }}
                 </div>
               </div>
               <div class="event-details">
@@ -50,50 +60,66 @@ import { EventService, Event } from '../services/event.service';
                     <i class="fas fa-user"></i>
                     {{ event.organizerId }}
                   </span>
-                  <button class="book-btn" (click)="bookEvent(event)">
-                    <i class="fas fa-ticket-alt"></i>
-                    Réserver
+                  <button 
+                    class="book-btn"
+                    (click)="bookEvent(event)"
+                    [disabled]="isLoading || checkIfUserHasTicket(event.id)" >
+                    <i class="fas" [ngClass]="isLoading ? 'fa-spinner fa-spin' : 'fa-ticket-alt'"></i>
+                    {{ checkIfUserHasTicket(event.id) ? 'Déjà réservé' : (isLoading ? 'Réservation...' : 'Réserver') }}
                   </button>
                 </div>
               </div>
             </div>
+          </div>
+          <div class="no-events" *ngIf="availableEvents.length === 0">
+            <i class="fas fa-calendar-times"></i>
+            <p>Aucun événement disponible pour le moment</p>
           </div>
         </section>
 
         <section class="tickets-section">
           <h2>Mes tickets</h2>
-          <div class="tickets-list">
-            <div *ngFor="let ticket of tickets" class="ticket-card">
-              <div class="ticket-header">
-                <span class="ticket-id">#{{ ticket.id }}</span>
-                <span class="ticket-status" [ngClass]="ticket.status">
-                  {{ ticket.status === 'valid' ? 'Valide' : 'Utilisé' }}
-                </span>
-              </div>
-              <div class="ticket-content">
-                <h3>{{ ticket.eventName }}</h3>
-                <div class="ticket-details">
-                  <p>
-                    <i class="fas fa-calendar"></i>
-                    {{ ticket.eventDate | date:'dd MMM yyyy' }}
-                  </p>
-                  <p>
-                    <i class="fas fa-map-marker-alt"></i>
-                    {{ ticket.eventLocation }}
-                  </p>
-                </div>
-                <div class="ticket-actions">
-                  <button class="download-btn" (click)="downloadTicket(ticket)">
-                    <i class="fas fa-download"></i>
-                    Télécharger
-                  </button>
-                </div>
+          <div class="my-tickets-list">
+            <div *ngIf="userTickets.length === 0" class="no-tickets-message">
+              Aucun ticket disponible pour le moment.
+            </div>
+            <div *ngFor="let ticket of userTickets" class="ticket-card">
+              <img [src]="ticket.event?.photo || 'assets/default-event.jpg'" alt="Event photo" class="ticket-photo">
+              <div class="ticket-details">
+                <div class="ticket-number">#{{ ticket.ticketNumber }} <span class="used-status">Utilisé</span></div>
+                <h3>{{ ticket.event?.name || 'Événement inconnu' }}</h3>
+                <p class="ticket-date">
+                  <i class="fas fa-calendar"></i>
+                  {{ ticket.event?.date | date:'medium' }}
+                </p>
+                <p class="ticket-location">
+                  <i class="fas fa-map-marker-alt"></i>
+                  {{ ticket.event?.location || 'Lieu inconnu' }}
+                </p>
+                <button (click)="downloadTicket(ticket.ticketNumber)" class="download-btn">
+                  Télécharger
+                </button>
+                <button (click)="deleteTicket(ticket.id)" class="delete-btn">
+                  Supprimer
+                </button>
               </div>
             </div>
+          </div>
+          <div class="no-tickets" *ngIf="userTickets.length === 0">
+            <i class="fas fa-ticket-alt"></i>
+            <p>Vous n'avez pas encore de tickets</p>
           </div>
         </section>
       </div>
     </div>
+
+    <!-- Ticket Confirmation Modal -->
+    <app-ticket-confirmation-modal
+      *ngIf="showTicketConfirmationModal"
+      [ticket]="bookedTicket"
+      [event]="bookedEvent"
+      (close)="closeTicketConfirmationModal()"
+    ></app-ticket-confirmation-modal>
   `,
   styles: [`
     .dashboard-container {
@@ -110,6 +136,30 @@ import { EventService, Event } from '../services/event.service';
       color: #2c3e50;
       font-size: 2rem;
       margin-bottom: 1.5rem;
+    }
+
+    .user-info {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .btn-danger {
+      background: #dc3545;
+      color: white;
+      border: none;
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      transition: background-color 0.3s ease;
+    }
+
+    .btn-danger:hover {
+      background: #c82333;
     }
 
     .stats {
@@ -332,6 +382,7 @@ import { EventService, Event } from '../services/event.service';
     .ticket-actions {
       display: flex;
       justify-content: flex-end;
+      gap: 0.5rem;
     }
 
     .download-btn {
@@ -349,6 +400,23 @@ import { EventService, Event } from '../services/event.service';
 
     .download-btn:hover {
       background: #218838;
+    }
+
+    .delete-btn {
+      background: #dc3545;
+      color: white;
+      border: none;
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      transition: background-color 0.3s ease;
+    }
+
+    .delete-btn:hover {
+      background: #c82333;
     }
 
     @media (max-width: 1024px) {
@@ -370,12 +438,68 @@ import { EventService, Event } from '../services/event.service';
         grid-template-columns: 1fr;
       }
     }
+
+    .no-events, .no-tickets {
+      text-align: center;
+      padding: 2rem;
+      background: #f8f9fa;
+      border-radius: 12px;
+      margin-top: 1rem;
+    }
+
+    .no-events i, .no-tickets i {
+      font-size: 3rem;
+      color: #6c757d;
+      margin-bottom: 1rem;
+    }
+
+    .no-events p, .no-tickets p {
+      color: #6c757d;
+      font-size: 1.1rem;
+    }
+
+    .ticket-card-flex {
+      display: flex;
+      align-items: stretch;
+      gap: 1.5rem;
+      background: white;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .ticket-event-image {
+      flex: 0 0 120px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #f8f9fa;
+      min-height: 100px;
+    }
+    .ticket-event-image img {
+      width: 100px;
+      height: 100px;
+      object-fit: cover;
+      border-radius: 8px;
+    }
+    .ticket-main-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
   `]
 })
 export class ClientDashboardComponent implements OnInit {
   events: Event[] = [];
   tickets: any[] = [];
-  upcomingEvents: Event[] = [];
+  availableEvents: Event[] = [];
+  currentUser: User | null = null;
+  isLoading: boolean = false;
+  errorMessage: string = '';
+  userTickets: Ticket[] = [];
+  showTicketConfirmationModal: boolean = false;
+  bookedTicket: Ticket | null = null;
+  bookedEvent: Event | null = null;
 
   constructor(
     private userService: UserService,
@@ -384,8 +508,8 @@ export class ClientDashboardComponent implements OnInit {
   ) {}
 
   ngOnInit() {
-    const currentUser = this.userService.getCurrentUser();
-    if (!currentUser || currentUser.type !== 'client') {
+    this.currentUser = this.userService.getCurrentUser();
+    if (!this.currentUser || this.currentUser.type !== 'client') {
       this.router.navigate(['/login']);
       return;
     }
@@ -394,40 +518,106 @@ export class ClientDashboardComponent implements OnInit {
     this.loadTickets();
   }
 
+  logout() {
+    this.userService.logout();
+    this.router.navigate(['/login']);
+  }
+
   loadEvents() {
-    this.eventService.getEvents().subscribe(events => {
-      this.events = events;
-      this.upcomingEvents = events.filter(event => new Date(event.date) > new Date());
+    this.isLoading = true;
+    console.log('Chargement des événements...');
+    this.eventService.getEvents().subscribe({
+      next: (events) => {
+        console.log('Événements reçus:', events);
+        this.events = events;
+        this.availableEvents = events;
+        console.log('Événements disponibles:', this.availableEvents);
+        this.isLoading = false;
+      },
+      error: (error) => {
+        console.error('Erreur lors du chargement des événements:', error);
+        this.errorMessage = 'Erreur lors du chargement des événements';
+        this.isLoading = false;
+      }
     });
   }
 
   loadTickets() {
-    // Simuler le chargement des tickets
-    this.tickets = [
-      {
-        id: 1,
-        eventName: 'Concert Jazz',
-        eventDate: new Date(),
-        eventLocation: 'Paris',
-        status: 'valid'
+    this.isLoading = true;
+    console.log('Chargement des tickets...');
+    this.eventService.getUserTickets().subscribe({
+      next: (tickets) => {
+        console.log('Tickets reçus:', tickets);
+        this.userTickets = tickets;
+        this.isLoading = false;
       },
-      {
-        id: 2,
-        eventName: 'Festival Rock',
-        eventDate: new Date(),
-        eventLocation: 'Lyon',
-        status: 'used'
+      error: (error) => {
+        console.error('Erreur lors du chargement des tickets:', error);
+        this.errorMessage = 'Erreur lors du chargement des tickets';
+        this.isLoading = false;
       }
-    ];
+    });
   }
 
   bookEvent(event: Event) {
-    // Implémenter la logique de réservation
+    if (this.isLoading) return;
+    
+    this.isLoading = true;
     console.log('Réservation de l\'événement:', event);
+    this.eventService.registerForEvent(event.id).subscribe({
+      next: (ticket) => {
+        console.log('Ticket reçu après réservation:', ticket);
+        
+        this.bookedTicket = ticket;
+        this.bookedEvent = this.availableEvents.find(e => e.id === ticket.eventId) || null;
+        this.showTicketConfirmationModal = true;
+
+        this.loadTickets();
+        this.isLoading = false;
+        this.errorMessage = '';
+      },
+      error: (error) => {
+        console.error('Erreur lors de la réservation:', error);
+        this.errorMessage = error.message || 'Une erreur est survenue lors de la réservation.';
+        this.isLoading = false;
+      }
+    });
   }
 
-  downloadTicket(ticket: any) {
-    // Implémenter la logique de téléchargement
-    console.log('Téléchargement du ticket:', ticket);
+  closeTicketConfirmationModal() {
+    console.log('Closing ticket confirmation modal.');
+    this.showTicketConfirmationModal = false;
+    this.bookedTicket = null;
+    this.bookedEvent = null;
+  }
+
+  deleteTicket(ticketId: number) {
+    if (confirm('Êtes-vous sûr de vouloir supprimer ce ticket ?')) {
+      console.log(`ClientDashboard: Attempting to delete ticket ID ${ticketId}`);
+      this.eventService.deleteTicket(ticketId).subscribe(
+        (success) => {
+          if (success) {
+            console.log(`ClientDashboard: Ticket ID ${ticketId} successfully deleted.`);
+            this.userTickets = this.userTickets.filter(ticket => ticket.id !== ticketId);
+          } else {
+            console.error(`ClientDashboard: Failed to delete ticket ID ${ticketId} via service.`);
+            alert('Erreur lors de la suppression du ticket.');
+          }
+        },
+        (error) => {
+          console.error(`ClientDashboard: Error deleting ticket ID ${ticketId}:`, error);
+          alert(`Erreur lors de la suppression du ticket : ${error.message || error}`);
+        }
+      );
+    }
+  }
+
+  downloadTicket(ticketNumber: string) {
+    alert(`Fonctionnalité de téléchargement pour le ticket ${ticketNumber} à implémenter.`);
+  }
+
+  checkIfUserHasTicket(eventId: number): boolean {
+    // Check if the userTickets array contains a ticket for the given eventId
+    return this.userTickets.some(ticket => ticket.eventId === eventId);
   }
 } 

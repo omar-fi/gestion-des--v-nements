@@ -10,6 +10,7 @@ export interface Event {
   description: string;
   date: Date;
   photo: string;
+  location: string;
   status: 'pending' | 'approved' | 'rejected';
   organizerId: number;
   organizer?: User;
@@ -60,6 +61,7 @@ export class EventService {
   }
 
   private saveEvents() {
+    console.log('Sauvegarde des événements:', this.events);
     localStorage.setItem('events', JSON.stringify(this.events));
     this.eventsSubject.next(this.events);
   }
@@ -72,9 +74,10 @@ export class EventService {
   createEvent(event: Omit<Event, 'id' | 'status'>): Observable<Event> {
     const newEvent: Event = {
       ...event,
-      id: Date.now(), // Utiliser timestamp comme ID unique
+      id: Date.now(),
       status: 'pending'
     };
+    console.log('Création nouvel événement:', newEvent);
     this.events.push(newEvent);
     this.saveEvents();
     return new Observable(subscriber => {
@@ -102,26 +105,39 @@ export class EventService {
   getEvents(): Observable<Event[]> {
     const currentUser = this.userService.getCurrentUser();
     if (!currentUser) {
+      console.log('EventService: getEvents - Aucun utilisateur connecté');
       return of([]);
     }
 
+    console.log('EventService: getEvents - Utilisateur connecté:', currentUser);
+    console.log('EventService: getEvents - Tous les événements disponibles dans le service:', this.events);
+
     let filteredEvents: Event[];
+    
     switch (currentUser.type) {
       case 'admin':
-        // L'admin voit tous les événements
         filteredEvents = [...this.events];
+        console.log('EventService: getEvents - Filtrage admin - Événements (tous):', filteredEvents);
         break;
       case 'client':
-        // Les clients ne voient que les événements approuvés
-        filteredEvents = this.events.filter(e => e.status === 'approved');
+        filteredEvents = this.events.filter(e => {
+          const isApproved = e.status === 'approved';
+          console.log(`EventService: getEvents - Client filter check for "${e.name}" (ID: ${e.id}): Approved=${isApproved}`);
+          return isApproved;
+        });
+        console.log('EventService: getEvents - Filtrage client - Événements (approuvés):', filteredEvents);
         break;
       case 'organizer':
-        // Les organisateurs voient leurs propres événements
         filteredEvents = this.events.filter(e => e.organizerId === currentUser.id);
+        console.log('Filtrage organisateur - Événements:', filteredEvents);
         break;
       default:
         filteredEvents = [];
     }
+
+    // Trier les événements par date
+    filteredEvents.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    console.log('Événements triés:', filteredEvents);
 
     return of(filteredEvents);
   }
@@ -137,6 +153,7 @@ export class EventService {
     const event = this.events.find(e => e.id === eventId);
     if (event) {
       event.status = 'approved';
+      console.log('Événement approuvé:', event);
       this.saveEvents();
     }
     return new Observable(subscriber => {
@@ -247,6 +264,31 @@ export class EventService {
     return new Observable(subscriber => {
       const eventTickets = this.tickets.filter(t => t.eventId === eventId);
       subscriber.next(eventTickets);
+      subscriber.complete();
+    });
+  }
+
+  deleteTicket(ticketId: number): Observable<boolean> {
+    const index = this.tickets.findIndex(t => t.id === ticketId);
+    if (index !== -1) {
+      // Optional: Add a check to ensure the user deleting is the ticket owner
+      // const currentUser = this.userService.getCurrentUser();
+      // if (!currentUser || this.tickets[index].userId !== currentUser.id) {
+      //   return new Observable(subscriber => {
+      //     subscriber.next(false);
+      //     subscriber.complete();
+      //   });
+      // }
+      
+      this.tickets.splice(index, 1);
+      this.saveTickets();
+      return new Observable(subscriber => {
+        subscriber.next(true);
+        subscriber.complete();
+      });
+    }
+    return new Observable(subscriber => {
+      subscriber.next(false);
       subscriber.complete();
     });
   }
