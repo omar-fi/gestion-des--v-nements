@@ -10,6 +10,7 @@ import { User } from '../models/user.model';
   standalone: true,
   imports: [CommonModule, FormsModule, RouterLink],
   template: `
+    <div class="register-background">
     <div class="register-container">
       <div class="register-card">
         <div class="register-header">
@@ -19,18 +20,30 @@ import { User } from '../models/user.model';
 
         <form (ngSubmit)="onSubmit()" class="register-form">
           <div class="form-group">
+          <label for="fullname">
+            <i class="fas fa-user-circle"></i>
+            Nom complet
+          </label>
+          <input
+            type="text"
+            id="fullname"
+            [(ngModel)]="fullname"
+            name="fullname"
+            required
+            placeholder="Entrez votre nom complet"
+          >
+          <div class="form-group">
             <label for="username">
               <i class="fas fa-user"></i>
               Nom d'utilisateur
             </label>
-            <input 
-              type="text" 
-              id="username" 
-              [(ngModel)]="username" 
-              name="username" 
+            <input
+              type="text"
+              id="username"
+              [(ngModel)]="username"
+              name="username"
               required
-              placeholder="Choisissez un nom d'utilisateur"
-            >
+              placeholder="Choisissez un nom d'utilisateur">
           </div>
 
           <div class="form-group">
@@ -38,11 +51,11 @@ import { User } from '../models/user.model';
               <i class="fas fa-lock"></i>
               Mot de passe
             </label>
-            <input 
-              type="password" 
-              id="password" 
-              [(ngModel)]="password" 
-              name="password" 
+            <input
+              type="password"
+              id="password"
+              [(ngModel)]="password"
+              name="password"
               required
               placeholder="Créez un mot de passe"
             >
@@ -53,11 +66,11 @@ import { User } from '../models/user.model';
               <i class="fas fa-lock"></i>
               Confirmer le mot de passe
             </label>
-            <input 
-              type="password" 
-              id="confirmPassword" 
-              [(ngModel)]="confirmPassword" 
-              name="confirmPassword" 
+            <input
+              type="password"
+              id="confirmPassword"
+              [(ngModel)]="confirmPassword"
+              name="confirmPassword"
               required
               placeholder="Confirmez votre mot de passe"
             >
@@ -68,10 +81,10 @@ import { User } from '../models/user.model';
               <i class="fas fa-user-tag"></i>
               Rôle
             </label>
-            <select 
-              id="role" 
-              [(ngModel)]="role" 
-              name="role" 
+            <select
+              id="role"
+              [(ngModel)]="role"
+              name="role"
               required
               class="role-select"
             >
@@ -89,6 +102,7 @@ import { User } from '../models/user.model';
             <i class="fas" [ngClass]="isLoading ? 'fa-spinner fa-spin' : 'fa-user-plus'"></i>
             {{ isLoading ? 'Création en cours...' : 'Créer un compte' }}
           </button>
+        </div>
         </form>
 
         <div class="login-link">
@@ -100,14 +114,23 @@ import { User } from '../models/user.model';
         </div>
       </div>
     </div>
+    </div>
   `,
   styles: [`
+    .register-background {
+      background: linear-gradient(135deg, #f0f4f8, #e0e7ff);
+      top: 0;
+      left: 0;
+      width: 100%;
+    position:absolute ;
+    }
+
+
     .register-container {
       min-height: 100vh;
       display: flex;
       align-items: center;
       justify-content: center;
-      background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
       padding: 2rem;
     }
 
@@ -262,6 +285,7 @@ import { User } from '../models/user.model';
   `]
 })
 export class RegisterComponent implements OnInit {
+  fullname: string = '';
   username: string = '';
   password: string = '';
   confirmPassword: string = '';
@@ -277,6 +301,7 @@ export class RegisterComponent implements OnInit {
   ngOnInit() {
     const currentUser = this.userService.getCurrentUser();
     if (currentUser) {
+      // @ts-ignore
       this.redirectBasedOnRole(currentUser.type);
     }
   }
@@ -289,11 +314,11 @@ export class RegisterComponent implements OnInit {
 
     this.isLoading = true;
     this.errorMessage = '';
-
+    // @ts-ignore
     const userData: Omit<User, 'id'> = {
       username: this.username,
       password: this.password,
-      type: this.role
+      role: this.role
     };
 
     this.userService.register(userData).subscribe({
@@ -327,4 +352,4 @@ export class RegisterComponent implements OnInit {
         this.router.navigate(['/login']);
     }
   }
-} 
+}

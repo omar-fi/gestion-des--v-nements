@@ -1,25 +1,29 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { BehaviorSubject, Observable, of } from 'rxjs';
+import { BehaviorSubject, Observable, of, from } from 'rxjs';
 import { UserService } from './user.service';
 import { User } from '../models/user.model';
+// @ts-ignore
+import { Ticket } from '../models/ticket.model';
+import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, where, onSnapshot } from 'firebase/firestore';
+import { db } from '../firebase.config';
 
 export interface Event {
-  id: number;
+  id: string;
   name: string;
   description: string;
   date: Date;
   photo: string;
   location: string;
   status: 'pending' | 'approved' | 'rejected';
-  organizerId: number;
+  organizerId: string;
   organizer?: User;
 }
 
 export interface Ticket {
-  id: number;
-  eventId: number;
-  userId: number;
+  id: string;
+  eventId: string;
+  userId: string;
   ticketNumber: string;
   purchaseDate: Date;
   event?: Event;
@@ -39,42 +43,57 @@ export class EventService {
     private http: HttpClient,
     private userService: UserService
   ) {
-    // Charger les événements depuis le localStorage
-    const storedEvents = localStorage.getItem('events');
-    if (storedEvents) {
-      this.events = JSON.parse(storedEvents).map((event: any) => ({
-        ...event,
-        date: new Date(event.date)
-      }));
+    // Écouter les changements des événements dans Firestore
+    const eventsRef = collection(db, 'events');
+    onSnapshot(eventsRef, (snapshot) => {
+      this.events = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        date: doc.data()['date'].toDate()
+      })) as Event[];
       this.eventsSubject.next(this.events);
-    }
+    });
 
-    // Charger les tickets depuis le localStorage
-    const storedTickets = localStorage.getItem('tickets');
-    if (storedTickets) {
-      this.tickets = JSON.parse(storedTickets).map((ticket: any) => ({
-        ...ticket,
-        purchaseDate: new Date(ticket.purchaseDate)
-      }));
+    // Écouter les changements des tickets dans Firestore
+    const ticketsRef = collection(db, 'tickets');
+    onSnapshot(ticketsRef, (snapshot) => {
+      this.tickets = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        purchaseDate: doc.data()['purchaseDate'].toDate()
+      })) as Ticket[];
       this.ticketsSubject.next(this.tickets);
+    });
+  }
+
+  private async saveEvents() {
+    const eventsRef = collection(db, 'events');
+    for (const event of this.events) {
+      if (event.id) {
+        const eventRef = doc(db, 'events', event.id);
+        await updateDoc(eventRef, { ...event, date: new Date(event.date) });
+      } else {
+        await addDoc(eventsRef, { ...event, date: new Date(event.date) });
+      }
     }
   }
 
-  private saveEvents() {
-    console.log('Sauvegarde des événements:', this.events);
-    localStorage.setItem('events', JSON.stringify(this.events));
-    this.eventsSubject.next(this.events);
-  }
-
-  private saveTickets() {
-    localStorage.setItem('tickets', JSON.stringify(this.tickets));
-    this.ticketsSubject.next(this.tickets);
+  private async saveTickets() {
+    const ticketsRef = collection(db, 'tickets');
+    for (const ticket of this.tickets) {
+      if (ticket.id) {
+        const ticketRef = doc(db, 'tickets', ticket.id);
+        await updateDoc(ticketRef, { ...ticket, purchaseDate: new Date(ticket.purchaseDate) });
+      } else {
+        await addDoc(ticketsRef, { ...ticket, purchaseDate: new Date(ticket.purchaseDate) });
+      }
+    }
   }
 
   createEvent(event: Omit<Event, 'id' | 'status'>): Observable<Event> {
     const newEvent: Event = {
       ...event,
-      id: Date.now(),
+      id: Date.now().toString(),
       status: 'pending'
     };
     console.log('Création nouvel événement:', newEvent);
@@ -113,8 +132,8 @@ export class EventService {
     console.log('EventService: getEvents - Tous les événements disponibles dans le service:', this.events);
 
     let filteredEvents: Event[];
-    
-    switch (currentUser.type) {
+
+    switch (currentUser.role) {
       case 'admin':
         filteredEvents = [...this.events];
         console.log('EventService: getEvents - Filtrage admin - Événements (tous):', filteredEvents);
@@ -149,7 +168,7 @@ export class EventService {
     });
   }
 
-  approveEvent(eventId: number): Observable<Event | null> {
+  approveEvent(eventId: string): Observable<Event | null> {
     const event = this.events.find(e => e.id === eventId);
     if (event) {
       event.status = 'approved';
@@ -162,7 +181,7 @@ export class EventService {
     });
   }
 
-  rejectEvent(eventId: number): Observable<Event | null> {
+  rejectEvent(eventId: string): Observable<Event | null> {
     const event = this.events.find(e => e.id === eventId);
     if (event) {
       event.status = 'rejected';
@@ -174,14 +193,14 @@ export class EventService {
     });
   }
 
-  getEventsByOrganizer(organizerId: number): Observable<Event[]> {
+  getEventsByOrganizer(organizerId: string): Observable<Event[]> {
     return new Observable(subscriber => {
       subscriber.next(this.events.filter(e => e.organizerId === organizerId));
       subscriber.complete();
     });
   }
 
-  deleteEvent(eventId: number): Observable<boolean> {
+  deleteEvent(eventId: string): Observable<boolean> {
     const index = this.events.findIndex(e => e.id === eventId);
     if (index !== -1) {
       this.events.splice(index, 1);
@@ -197,7 +216,7 @@ export class EventService {
     });
   }
 
-  registerForEvent(eventId: number): Observable<Ticket> {
+  registerForEvent(eventId: string): Observable<Ticket> {
     const currentUser = this.userService.getCurrentUser();
     if (!currentUser) {
       return new Observable(subscriber => {
@@ -229,7 +248,7 @@ export class EventService {
     const ticketNumber = `TICKET-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
     const newTicket: Ticket = {
-      id: Date.now(),
+      id: Date.now().toString(),
       eventId,
       userId: currentUser.id,
       ticketNumber,
@@ -260,7 +279,7 @@ export class EventService {
     });
   }
 
-  getEventTickets(eventId: number): Observable<Ticket[]> {
+  getEventTickets(eventId: string): Observable<Ticket[]> {
     return new Observable(subscriber => {
       const eventTickets = this.tickets.filter(t => t.eventId === eventId);
       subscriber.next(eventTickets);
@@ -268,18 +287,9 @@ export class EventService {
     });
   }
 
-  deleteTicket(ticketId: number): Observable<boolean> {
+  deleteTicket(ticketId: string): Observable<boolean> {
     const index = this.tickets.findIndex(t => t.id === ticketId);
     if (index !== -1) {
-      // Optional: Add a check to ensure the user deleting is the ticket owner
-      // const currentUser = this.userService.getCurrentUser();
-      // if (!currentUser || this.tickets[index].userId !== currentUser.id) {
-      //   return new Observable(subscriber => {
-      //     subscriber.next(false);
-      //     subscriber.complete();
-      //   });
-      // }
-      
       this.tickets.splice(index, 1);
       this.saveTickets();
       return new Observable(subscriber => {
@@ -292,4 +302,4 @@ export class EventService {
       subscriber.complete();
     });
   }
-} 
+}

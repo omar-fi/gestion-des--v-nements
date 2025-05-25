@@ -4,17 +4,33 @@
       <h2>Créer un compte</h2>
       <p>Rejoignez notre plateforme d'événements</p>
     </div>
-    
+
     <form (ngSubmit)="onSubmit()" #registerForm="ngForm" class="register-form">
       <div class="form-group">
+        <label for="fullname">Nom Complet</label>
+        <input
+          type="text"
+          id="fullname"
+          name="fullname"
+          [(ngModel)]="fullname"
+          required
+          #fullnameInput="ngModel"
+          class="form-control"
+          [class.is-invalid]="fullnameInput.invalid && fullnameInput.touched"
+          placeholder="Entrez votre nom complet">
+        <div class="error-message" *ngIf="fullnameInput.invalid && fullnameInput.touched">
+          <span *ngIf="fullnameInput.errors?.['required']">Le nom  est requis</span>
+          <span *ngIf="fullnameInput.errors?.['minlength']">Le nom  doit contenir au moins 3 caractères</span>
+        </div>
+      <div class="form-group">
         <label for="email">Email</label>
-        <input 
-          type="email" 
-          id="email" 
-          name="email" 
-          [(ngModel)]="email" 
-          required 
-          email 
+        <input
+          type="email"
+          id="email"
+          name="email"
+          [(ngModel)]="email"
+          required
+          email
           #emailInput="ngModel"
           class="form-control"
           [class.is-invalid]="emailInput.invalid && emailInput.touched"
@@ -27,12 +43,12 @@
 
       <div class="form-group">
         <label for="password">Mot de passe</label>
-        <input 
-          type="password" 
-          id="password" 
-          name="password" 
-          [(ngModel)]="password" 
-          required 
+        <input
+          type="password"
+          id="password"
+          name="password"
+          [(ngModel)]="password"
+          required
           minlength="6"
           #passwordInput="ngModel"
           class="form-control"
@@ -46,12 +62,12 @@
 
       <div class="form-group">
         <label for="confirmPassword">Confirmer le mot de passe</label>
-        <input 
-          type="password" 
-          id="confirmPassword" 
-          name="confirmPassword" 
-          [(ngModel)]="confirmPassword" 
-          required 
+        <input
+          type="password"
+          id="confirmPassword"
+          name="confirmPassword"
+          [(ngModel)]="confirmPassword"
+          required
           #confirmPasswordInput="ngModel"
           class="form-control"
           [class.is-invalid]="confirmPasswordInput.invalid && confirmPasswordInput.touched"
@@ -63,10 +79,10 @@
 
       <div class="form-group">
         <label for="role">Type de compte</label>
-        <select 
-          id="role" 
-          name="role" 
-          [(ngModel)]="role" 
+        <select
+          id="role"
+          name="role"
+          [(ngModel)]="role"
           required
           #roleInput="ngModel"
           class="form-control"
@@ -81,8 +97,8 @@
       </div>
 
       <div class="form-actions">
-        <button 
-          type="submit" 
+        <button
+          type="submit"
           class="btn btn-primary"
           [disabled]="isLoading">
           <span *ngIf="!isLoading">Créer un compte</span>
@@ -92,8 +108,8 @@
 
       <div class="form-footer">
         <p>Vous avez déjà un compte ?</p>
-        <button 
-          type="button" 
+        <button
+          type="button"
           class="btn btn-secondary"
           (click)="goToLogin()">
           Se connecter
@@ -103,6 +119,7 @@
       <div class="error-message" *ngIf="errorMessage">
         {{ errorMessage }}
       </div>
+
     </form>
   </div>
-</div> 
+</div>

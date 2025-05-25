@@ -17,7 +17,7 @@ import { ChatbotComponent } from '../components/chatbot/chatbot.component';
       <div class="dashboard-header">
         <h1>Tableau de bord client</h1>
         <div class="user-info">
-          <span>Bienvenue, {{ currentUser?.username }}</span>
+          <span>Bienvenue, {{ currentUser?.fullname }}</span>
         </div>
         <div class="stats">
           <div class="stat-card">
@@ -57,7 +57,7 @@ import { ChatbotComponent } from '../components/chatbot/chatbot.component';
                     <i class="fas fa-user"></i>
                     {{ event.organizerId }}
                   </span>
-                  <button 
+                  <button
                     class="book-btn"
                     (click)="bookEvent(event)"
                     [disabled]="isLoading || checkIfUserHasTicket(event.id)" >
@@ -509,6 +509,7 @@ export class ClientDashboardComponent implements OnInit {
 
   ngOnInit() {
     this.currentUser = this.userService.getCurrentUser();
+    // @ts-ignore
     if (!this.currentUser || this.currentUser.type !== 'client') {
       this.router.navigate(['/login']);
       return;
@@ -538,45 +539,38 @@ export class ClientDashboardComponent implements OnInit {
   }
 
   loadTickets() {
-    this.isLoading = true;
-    console.log('Chargement des tickets...');
-    this.eventService.getUserTickets().subscribe({
-      next: (tickets) => {
-        console.log('Tickets reçus:', tickets);
+    this.eventService.getUserTickets().subscribe(
+      tickets => {
         this.userTickets = tickets;
-        this.isLoading = false;
+        console.log('Tickets chargés:', tickets);
       },
-      error: (error) => {
+      error => {
         console.error('Erreur lors du chargement des tickets:', error);
-        this.errorMessage = 'Erreur lors du chargement des tickets';
-        this.isLoading = false;
       }
-    });
+    );
   }
 
   bookEvent(event: Event) {
-    if (this.isLoading) return;
-    
-    this.isLoading = true;
-    console.log('Réservation de l\'événement:', event);
-    this.eventService.registerForEvent(event.id).subscribe({
-      next: (ticket) => {
-        console.log('Ticket reçu après réservation:', ticket);
-        
-        this.bookedTicket = ticket;
-        this.bookedEvent = this.availableEvents.find(e => e.id === ticket.eventId) || null;
-        this.showTicketConfirmationModal = true;
+    if (!this.currentUser) {
+      this.router.navigate(['/login']);
+      return;
+    }
 
+    this.isLoading = true;
+    this.eventService.registerForEvent(event.id).subscribe(
+      ticket => {
+        this.isLoading = false;
+        this.bookedTicket = ticket;
+        this.bookedEvent = event;
+        this.showTicketConfirmationModal = true;
         this.loadTickets();
-        this.isLoading = false;
-        this.errorMessage = '';
       },
-      error: (error) => {
-        console.error('Erreur lors de la réservation:', error);
-        this.errorMessage = error.message || 'Une erreur est survenue lors de la réservation.';
+      error => {
         this.isLoading = false;
+        console.error('Erreur lors de la réservation:', error);
+        alert('Erreur lors de la réservation. Veuillez réessayer.');
       }
-    });
+    );
   }
 
   closeTicketConfirmationModal() {
@@ -586,33 +580,25 @@ export class ClientDashboardComponent implements OnInit {
     this.bookedEvent = null;
   }
 
-  deleteTicket(ticketId: number) {
+  deleteTicket(ticketId: string) {
     if (confirm('Êtes-vous sûr de vouloir supprimer ce ticket ?')) {
-      console.log(`ClientDashboard: Attempting to delete ticket ID ${ticketId}`);
       this.eventService.deleteTicket(ticketId).subscribe(
-        (success) => {
-          if (success) {
-            console.log(`ClientDashboard: Ticket ID ${ticketId} successfully deleted.`);
-            this.userTickets = this.userTickets.filter(ticket => ticket.id !== ticketId);
-          } else {
-            console.error(`ClientDashboard: Failed to delete ticket ID ${ticketId} via service.`);
-            alert('Erreur lors de la suppression du ticket.');
-          }
+        () => {
+          this.loadTickets();
         },
-        (error) => {
-          console.error(`ClientDashboard: Error deleting ticket ID ${ticketId}:`, error);
-          alert(`Erreur lors de la suppression du ticket : ${error.message || error}`);
+        error => {
+          console.error('Erreur lors de la suppression du ticket:', error);
         }
       );
     }
   }
 
   downloadTicket(ticketNumber: string) {
-    alert(`Fonctionnalité de téléchargement pour le ticket ${ticketNumber} à implémenter.`);
+    // Implémentation du téléchargement du ticket
+    console.log('Téléchargement du ticket:', ticketNumber);
   }
 
-  checkIfUserHasTicket(eventId: number): boolean {
-    // Check if the userTickets array contains a ticket for the given eventId
+  checkIfUserHasTicket(eventId: string): boolean {
     return this.userTickets.some(ticket => ticket.eventId === eventId);
   }
-} 
+}

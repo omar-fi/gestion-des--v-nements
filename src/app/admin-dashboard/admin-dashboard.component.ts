@@ -13,7 +13,7 @@ import { EventService, Event } from '../services/event.service';
       <header>
         <h1>Dashboard Administrateur</h1>
       </header>
-      
+
       <div class="content">
         <div class="stats-section">
           <div class="stat-card">
@@ -43,19 +43,19 @@ import { EventService, Event } from '../services/event.service';
           <div class="section-header">
             <h2>Gestion des événements</h2>
             <div class="filters">
-              <button 
+              <button
                 [class.active]="currentFilter === 'all'"
                 (click)="setFilter('all')"
                 class="filter-btn">
                 Tous
               </button>
-              <button 
+              <button
                 [class.active]="currentFilter === 'past'"
                 (click)="setFilter('past')"
                 class="filter-btn">
                 Passés
               </button>
-              <button 
+              <button
                 [class.active]="currentFilter === 'upcoming'"
                 (click)="setFilter('upcoming')"
                 class="filter-btn">
@@ -68,7 +68,7 @@ import { EventService, Event } from '../services/event.service';
               <img [src]="event.photo || 'assets/default-event.jpg'" alt="Event photo" class="event-photo">
               <div class="event-details">
                 <div class="event-status" [ngClass]="event.status">
-                  {{ event.status === 'pending' ? 'En attente' : 
+                  {{ event.status === 'pending' ? 'En attente' :
                      event.status === 'approved' ? 'Approuvé' : 'Rejeté' }}
                 </div>
                 <h3>{{ event.name }}</h3>
@@ -81,7 +81,7 @@ import { EventService, Event } from '../services/event.service';
                   <i class="fas fa-user"></i>
                   Organisateur: {{ event.organizer?.username || 'Inconnu' }}
                 </p>
-                
+
                 <div class="event-actions" *ngIf="event.status === 'pending'">
                   <button (click)="approveEvent(event.id)" class="approve-btn">
                     <i class="fas fa-check"></i>
@@ -111,7 +111,7 @@ import { EventService, Event } from '../services/event.service';
       max-width: 1200px;
       margin: 0 auto;
     }
-    
+
     header {
       display: flex;
       justify-content: space-between;
@@ -364,7 +364,7 @@ export class AdminDashboardComponent implements OnInit {
 
   ngOnInit() {
     const currentUser = this.userService.getCurrentUser();
-    if (!currentUser || currentUser.type !== 'admin') {
+    if (!currentUser || currentUser.role !== 'admin') {
       this.router.navigate(['/login']);
       return;
     }
@@ -414,50 +414,38 @@ export class AdminDashboardComponent implements OnInit {
     });
   }
 
-  approveEvent(eventId: number) {
-    if (confirm('Êtes-vous sûr de vouloir approuver cet événement ?')) {
-      this.eventService.approveEvent(eventId).subscribe(() => {
+  approveEvent(eventId: string) {
+    this.eventService.approveEvent(eventId).subscribe(
+      () => {
         this.loadEvents();
-      });
-    }
+      },
+      error => {
+        console.error('Erreur lors de l\'approbation de l\'événement:', error);
+      }
+    );
   }
 
-  rejectEvent(eventId: number) {
-    if (confirm('Êtes-vous sûr de vouloir rejeter cet événement ?')) {
-      this.eventService.rejectEvent(eventId).subscribe(() => {
+  rejectEvent(eventId: string) {
+    this.eventService.rejectEvent(eventId).subscribe(
+      () => {
         this.loadEvents();
-      });
-    }
+      },
+      error => {
+        console.error('Erreur lors du rejet de l\'événement:', error);
+      }
+    );
   }
 
-  deleteEvent(eventId: number) {
-    const event = this.events.find(e => e.id === eventId);
-    if (!event) {
-      console.warn(`AdminDashboard: Event with ID ${eventId} not found for deletion.`);
-      return;
-    }
-
-    const message = this.isPastEvent(event)
-      ? 'Cet événement est passé. Êtes-vous sûr de vouloir le supprimer ?'
-      : 'Êtes-vous sûr de vouloir supprimer cet événement ?';
-
-    if (confirm(message)) {
-      console.log(`AdminDashboard: Confirming deletion for event ID ${eventId}`);
+  deleteEvent(eventId: string) {
+    if (confirm('Êtes-vous sûr de vouloir supprimer cet événement ?')) {
       this.eventService.deleteEvent(eventId).subscribe(
-        (success) => {
-          if (success) {
-            console.log(`AdminDashboard: Event ID ${eventId} successfully deleted.`);
-            this.loadEvents();
-          } else {
-            console.error(`AdminDashboard: Failed to delete event ID ${eventId} via service.`);
-          }
+        () => {
+          this.loadEvents();
         },
-        (error) => {
-          console.error(`AdminDashboard: Error deleting event ID ${eventId}:`, error);
+        error => {
+          console.error('Erreur lors de la suppression de l\'événement:', error);
         }
       );
-    } else {
-      console.log(`AdminDashboard: Deletion cancelled for event ID ${eventId}.`);
     }
   }
-} 
+}

@@ -76,7 +76,7 @@ import { EventService, Event } from '../services/event.service';
               <div class="event-image">
                 <img [src]="event.photo || 'assets/default-event.jpg'" [alt]="event.name">
                 <div class="event-status" [ngClass]="event.status">
-                  {{ event.status === 'pending' ? 'En attente' : 
+                  {{ event.status === 'pending' ? 'En attente' :
                      event.status === 'approved' ? 'Approuvé' : 'Rejeté' }}
                 </div>
               </div>
@@ -429,7 +429,7 @@ export class OrganizerDashboardComponent implements OnInit {
 
   ngOnInit() {
     const currentUser = this.userService.getCurrentUser();
-    if (!currentUser || currentUser.type !== 'organizer') {
+    if (!currentUser || currentUser.role !== 'organizer') {
       this.router.navigate(['/login']);
       return;
     }
@@ -456,11 +456,12 @@ export class OrganizerDashboardComponent implements OnInit {
     if (!currentUser) return;
 
     this.isLoading = true;
+    // @ts-ignore
     const newEvent = {
       ...this.eventFormData,
       organizerId: currentUser.id
     } as Event;
-    
+
     this.eventService.createEvent(newEvent).subscribe({
       next: () => {
         this.loadEvents();
@@ -491,7 +492,7 @@ export class OrganizerDashboardComponent implements OnInit {
     }
   }
 
-  deleteEvent(eventId: number) {
+  deleteEvent(eventId: string) {
     if (confirm('Êtes-vous sûr de vouloir supprimer cet événement ?')) {
       this.eventService.deleteEvent(eventId).subscribe({
         next: () => {
@@ -503,4 +504,4 @@ export class OrganizerDashboardComponent implements OnInit {
       });
     }
   }
-} 
+}

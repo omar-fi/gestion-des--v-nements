@@ -1,6 +1,7 @@
 export interface User {
-  id: number;
+  id: string;
+  fullname: string;
   username: string;
   password: string;
-  type: 'admin' | 'organizer' | 'client';
-} 
+ role: 'admin' | 'organizer' | 'client';
+}

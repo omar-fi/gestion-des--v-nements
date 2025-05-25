@@ -9,6 +9,7 @@ import { UserService } from '../services/user.service';
   standalone: true,
   imports: [CommonModule, FormsModule, RouterLink],
   template: `
+    <div class="login-background">
     <div class="login-container">
       <div class="login-content">
         <div class="login-left">
@@ -45,11 +46,11 @@ import { UserService } from '../services/user.service';
                   <i class="fas fa-user"></i>
                   Nom d'utilisateur
                 </label>
-                <input 
-                  type="text" 
-                  id="username" 
-                  [(ngModel)]="username" 
-                  name="username" 
+                <input
+                  type="text"
+                  id="username"
+                  [(ngModel)]="username"
+                  name="username"
                   required
                   placeholder="Entrez votre nom d'utilisateur"
                   [class.error]="errorMessage"
@@ -62,17 +63,17 @@ import { UserService } from '../services/user.service';
                   Mot de passe
                 </label>
                 <div class="password-input">
-                  <input 
+                  <input
                     [type]="showPassword ? 'text' : 'password'"
-                    id="password" 
-                    [(ngModel)]="password" 
-                    name="password" 
+                    id="password"
+                    [(ngModel)]="password"
+                    name="password"
                     required
                     placeholder="Entrez votre mot de passe"
                     [class.error]="errorMessage"
                   >
-                  <button 
-                    type="button" 
+                  <button
+                    type="button"
                     class="toggle-password"
                     (click)="togglePassword()"
                   >
@@ -86,10 +87,10 @@ import { UserService } from '../services/user.service';
                   <i class="fas fa-user-tag"></i>
                   Rôle
                 </label>
-                <select 
-                  id="role" 
-                  [(ngModel)]="role" 
-                  name="role" 
+                <select
+                  id="role"
+                  [(ngModel)]="role"
+                  name="role"
                   required
                   class="role-select"
                   [class.error]="errorMessage"
@@ -122,28 +123,28 @@ import { UserService } from '../services/user.service';
         </div>
       </div>
     </div>
+    </div>
   `,
   styles: [`
-    .login-container {
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+
+    .login-background {
+      position: fixed;
       background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-      padding: 2rem;
     }
+
 
     .login-content {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 2rem;
+      top: 0;
+      right: 250px;
+      height: 100vh;
+      position: fixed;
       max-width: 1200px;
-      width: 100%;
       background: white;
       border-radius: 20px;
       box-shadow: 0 10px 30px rgba(0,0,0,0.1);
       overflow: hidden;
-      margin: auto;
     }
 
     .login-left {
@@ -400,7 +401,7 @@ export class LoginComponent implements OnInit {
   ngOnInit() {
     const currentUser = this.userService.getCurrentUser();
     if (currentUser) {
-      this.redirectBasedOnRole(currentUser.type);
+      this.redirectBasedOnRole(currentUser.role);
     }
   }
 
@@ -410,8 +411,8 @@ export class LoginComponent implements OnInit {
 
     this.userService.login(this.username, this.password).subscribe({
       next: (user) => {
-        if (user && user.type === this.role) {
-          this.redirectBasedOnRole(user.type);
+        if (user && user.role === this.role) {
+          this.redirectBasedOnRole(user.role);
         } else {
           this.errorMessage = 'Identifiants invalides ou rôle incorrect';
         }
