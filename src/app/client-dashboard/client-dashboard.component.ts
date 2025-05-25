@@ -6,21 +6,18 @@ import { UserService } from '../services/user.service';
 import { EventService, Event, Ticket } from '../services/event.service';
 import { User } from '../models/user.model';
 import { TicketConfirmationModalComponent } from '../components/ticket-confirmation-modal/ticket-confirmation-modal.component';
+import { ChatbotComponent } from '../components/chatbot/chatbot.component';
 
 @Component({
   selector: 'app-client-dashboard',
   standalone: true,
-  imports: [CommonModule, FormsModule, TicketConfirmationModalComponent],
+  imports: [CommonModule, FormsModule, TicketConfirmationModalComponent, ChatbotComponent],
   template: `
     <div class="dashboard-container">
       <div class="dashboard-header">
         <h1>Tableau de bord client</h1>
         <div class="user-info">
           <span>Bienvenue, {{ currentUser?.username }}</span>
-          <button class="btn btn-danger" (click)="logout()">
-            <i class="fas fa-sign-out-alt"></i>
-            Déconnexion
-          </button>
         </div>
         <div class="stats">
           <div class="stat-card">
@@ -111,15 +108,18 @@ import { TicketConfirmationModalComponent } from '../components/ticket-confirmat
           </div>
         </section>
       </div>
-    </div>
 
-    <!-- Ticket Confirmation Modal -->
-    <app-ticket-confirmation-modal
-      *ngIf="showTicketConfirmationModal"
-      [ticket]="bookedTicket"
-      [event]="bookedEvent"
-      (close)="closeTicketConfirmationModal()"
-    ></app-ticket-confirmation-modal>
+      <!-- Ticket Confirmation Modal -->
+      <app-ticket-confirmation-modal
+        *ngIf="showTicketConfirmationModal"
+        [ticket]="bookedTicket"
+        [event]="bookedEvent"
+        (close)="closeTicketConfirmationModal()"
+      ></app-ticket-confirmation-modal>
+
+      <!-- Chatbot -->
+      <app-chatbot></app-chatbot>
+    </div>
   `,
   styles: [`
     .dashboard-container {
@@ -516,11 +516,6 @@ export class ClientDashboardComponent implements OnInit {
 
     this.loadEvents();
     this.loadTickets();
-  }
-
-  logout() {
-    this.userService.logout();
-    this.router.navigate(['/login']);
   }
 
   loadEvents() {
