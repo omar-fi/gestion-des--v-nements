@@ -1,13 +1,15 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { UserService } from '../services/user.service';
-import { EventService, Event } from '../services/event.service';
+import { EventService, Event, Ticket } from '../services/event.service';
+import { ChatbotComponent } from '../components/chatbot/chatbot.component';
 
 @Component({
   selector: 'app-client-dashboard',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, ChatbotComponent, FormsModule],
   template: `
     <div class="dashboard-container">
       <div class="dashboard-header">
@@ -50,7 +52,7 @@ import { EventService, Event } from '../services/event.service';
                     <i class="fas fa-user"></i>
                     {{ event.organizerId }}
                   </span>
-                  <button class="book-btn" (click)="bookEvent(event)">
+                  <button class="book-btn" (click)="openBookingModal(event)">
                     <i class="fas fa-ticket-alt"></i>
                     Réserver
                   </button>
@@ -87,6 +89,10 @@ import { EventService, Event } from '../services/event.service';
                     <i class="fas fa-download"></i>
                     Télécharger
                   </button>
+                  <button class="delete-btn" (click)="deleteTicket(ticket)">
+                    <i class="fas fa-trash"></i>
+                    Supprimer
+                  </button>
                 </div>
               </div>
             </div>
@@ -94,6 +100,37 @@ import { EventService, Event } from '../services/event.service';
         </section>
       </div>
     </div>
+
+    <!-- Modal de réservation -->
+    <div class="modal" *ngIf="showBookingModal" (click)="closeBookingModal($event)">
+      <div class="modal-content" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h2>Réserver des tickets</h2>
+          <button class="close-btn" (click)="closeBookingModal($event)">×</button>
+        </div>
+        <div class="modal-body">
+          <h3>{{ selectedEvent?.name }}</h3>
+          <p>{{ selectedEvent?.description }}</p>
+          <div class="ticket-selection">
+            <label for="ticketCount">Nombre de tickets :</label>
+            <div class="ticket-controls">
+              <button (click)="decreaseTicketCount()" [disabled]="ticketCount <= 1">-</button>
+              <input type="number" id="ticketCount" [(ngModel)]="ticketCount" min="1" max="10">
+              <button (click)="increaseTicketCount()" [disabled]="ticketCount >= 10">+</button>
+            </div>
+          </div>
+          <div class="total-price" *ngIf="selectedEvent">
+            Total : {{ ticketCount * selectedEvent.price }} €
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="cancel-btn" (click)="closeBookingModal($event)">Annuler</button>
+          <button class="confirm-btn" (click)="confirmBooking()">Confirmer</button>
+        </div>
+      </div>
+    </div>
+
+    <app-chatbot></app-chatbot>
   `,
   styles: [`
     .dashboard-container {
@@ -332,23 +369,35 @@ import { EventService, Event } from '../services/event.service';
     .ticket-actions {
       display: flex;
       justify-content: flex-end;
+      gap: 1rem;
     }
 
-    .download-btn {
-      background: #28a745;
-      color: white;
-      border: none;
+    .download-btn, .delete-btn {
       padding: 0.5rem 1rem;
+      border: none;
       border-radius: 6px;
       cursor: pointer;
       display: flex;
       align-items: center;
       gap: 0.5rem;
       transition: background-color 0.3s ease;
+      color: white;
+    }
+
+    .download-btn {
+      background: #28a745;
     }
 
     .download-btn:hover {
       background: #218838;
+    }
+
+    .delete-btn {
+      background: #dc3545;
+    }
+
+    .delete-btn:hover {
+      background: #c82333;
     }
 
     @media (max-width: 1024px) {
@@ -370,12 +419,127 @@ import { EventService, Event } from '../services/event.service';
         grid-template-columns: 1fr;
       }
     }
+
+    .modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+
+    .modal-content {
+      background: white;
+      border-radius: 12px;
+      width: 90%;
+      max-width: 500px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .modal-header {
+      padding: 1rem;
+      border-bottom: 1px solid #eee;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .modal-header h2 {
+      margin: 0;
+      color: #2c3e50;
+    }
+
+    .modal-body {
+      padding: 1.5rem;
+    }
+
+    .modal-body h3 {
+      margin: 0 0 0.5rem 0;
+      color: #2c3e50;
+    }
+
+    .ticket-selection {
+      margin: 1.5rem 0;
+    }
+
+    .ticket-controls {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-top: 0.5rem;
+    }
+
+    .ticket-controls button {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: #3498db;
+      color: white;
+      border: none;
+      font-size: 1.2rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .ticket-controls button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+
+    .ticket-controls input {
+      width: 60px;
+      text-align: center;
+      padding: 0.5rem;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+    }
+
+    .total-price {
+      font-size: 1.2rem;
+      font-weight: bold;
+      color: #2c3e50;
+      margin-top: 1rem;
+    }
+
+    .modal-footer {
+      padding: 1rem;
+      border-top: 1px solid #eee;
+      display: flex;
+      justify-content: flex-end;
+      gap: 1rem;
+    }
+
+    .cancel-btn {
+      background: #e74c3c;
+    }
+
+    .confirm-btn {
+      background: #2ecc71;
+    }
+
+    .cancel-btn:hover {
+      background: #c0392b;
+    }
+
+    .confirm-btn:hover {
+      background: #27ae60;
+    }
   `]
 })
 export class ClientDashboardComponent implements OnInit {
   events: Event[] = [];
-  tickets: any[] = [];
+  tickets: Ticket[] = [];
   upcomingEvents: Event[] = [];
+  showBookingModal: boolean = false;
+  selectedEvent: Event | null = null;
+  ticketCount: number = 1;
 
   constructor(
     private userService: UserService,
@@ -403,20 +567,31 @@ export class ClientDashboardComponent implements OnInit {
 
   loadTickets() {
     // Simuler le chargement des tickets
+    const currentUser = this.userService.getCurrentUser();
+    if (!currentUser) return;
+
     this.tickets = [
       {
         id: 1,
+        eventId: 1,
+        userId: currentUser.id,
+        ticketNumber: 'TICKET-001',
+        purchaseDate: new Date(),
+        status: 'valid',
         eventName: 'Concert Jazz',
         eventDate: new Date(),
-        eventLocation: 'Paris',
-        status: 'valid'
+        eventLocation: 'Paris'
       },
       {
         id: 2,
+        eventId: 2,
+        userId: currentUser.id,
+        ticketNumber: 'TICKET-002',
+        purchaseDate: new Date(),
+        status: 'used',
         eventName: 'Festival Rock',
         eventDate: new Date(),
-        eventLocation: 'Lyon',
-        status: 'used'
+        eventLocation: 'Lyon'
       }
     ];
   }
@@ -426,8 +601,72 @@ export class ClientDashboardComponent implements OnInit {
     console.log('Réservation de l\'événement:', event);
   }
 
-  downloadTicket(ticket: any) {
+  downloadTicket(ticket: Ticket) {
     // Implémenter la logique de téléchargement
     console.log('Téléchargement du ticket:', ticket);
+  }
+
+  openBookingModal(event: Event) {
+    this.selectedEvent = event;
+    this.ticketCount = 1;
+    this.showBookingModal = true;
+  }
+
+  closeBookingModal(event: MouseEvent) {
+    this.showBookingModal = false;
+    this.selectedEvent = null;
+  }
+
+  increaseTicketCount() {
+    if (this.ticketCount < 10) {
+      this.ticketCount++;
+    }
+  }
+
+  decreaseTicketCount() {
+    if (this.ticketCount > 1) {
+      this.ticketCount--;
+    }
+  }
+
+  confirmBooking() {
+    if (this.selectedEvent) {
+      const currentUser = this.userService.getCurrentUser();
+      if (!currentUser) return;
+
+      // Ici, vous pouvez ajouter la logique pour sauvegarder la réservation
+      console.log('Réservation confirmée:', {
+        event: this.selectedEvent,
+        ticketCount: this.ticketCount,
+        totalPrice: this.ticketCount * (this.selectedEvent.price || 0)
+      });
+      
+      // Ajouter le ticket à la liste des tickets
+      const newTicket: Ticket = {
+        id: Date.now(),
+        eventId: this.selectedEvent.id,
+        userId: currentUser.id,
+        ticketNumber: `TICKET-${Date.now()}`,
+        purchaseDate: new Date(),
+        status: 'valid',
+        eventName: this.selectedEvent.name,
+        eventDate: this.selectedEvent.date,
+        eventLocation: this.selectedEvent.location
+      };
+      
+      this.tickets.unshift(newTicket);
+      this.closeBookingModal(new MouseEvent('click'));
+    }
+  }
+
+  deleteTicket(ticket: Ticket) {
+    if (confirm('Êtes-vous sûr de vouloir supprimer ce ticket ?')) {
+      const index = this.tickets.findIndex(t => t.id === ticket.id);
+      if (index !== -1) {
+        this.tickets.splice(index, 1);
+        // Ici, vous pouvez ajouter la logique pour supprimer le ticket du backend
+        console.log('Ticket supprimé:', ticket);
+      }
+    }
   }
 } 

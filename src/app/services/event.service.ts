@@ -9,9 +9,11 @@ export interface Event {
   name: string;
   description: string;
   date: Date;
-  photo: string;
-  status: 'pending' | 'approved' | 'rejected';
+  location: string;
   organizerId: number;
+  photo?: string;
+  price: number;
+  status: 'pending' | 'approved' | 'rejected';
   organizer?: User;
 }
 
@@ -21,6 +23,10 @@ export interface Ticket {
   userId: number;
   ticketNumber: string;
   purchaseDate: Date;
+  status: 'valid' | 'used';
+  eventName: string;
+  eventDate: Date;
+  eventLocation: string;
   event?: Event;
   user?: User;
 }
@@ -217,6 +223,10 @@ export class EventService {
       userId: currentUser.id,
       ticketNumber,
       purchaseDate: new Date(),
+      status: 'valid',
+      eventName: event.name,
+      eventDate: event.date,
+      eventLocation: event.location,
       event,
       user: currentUser
     };

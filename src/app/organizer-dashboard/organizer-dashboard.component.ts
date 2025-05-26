@@ -4,11 +4,12 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { UserService } from '../services/user.service';
 import { EventService, Event } from '../services/event.service';
+import { ChatbotComponent } from '../components/chatbot/chatbot.component';
 
 @Component({
   selector: 'app-organizer-dashboard',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, ChatbotComponent],
   template: `
     <div class="dashboard-container">
       <div class="dashboard-header">
@@ -111,7 +112,7 @@ import { EventService, Event } from '../services/event.service';
             
             <button type="submit" class="submit-btn" [disabled]="isLoading">
               <i class="fas" [ngClass]="isLoading ? 'fa-spinner fa-spin' : 'fa-plus'"></i>
-              {{ isLoading ? 'Création en cours...' : 'Créer l\'événement' }}
+              {{ isLoading ? 'Création en cours...' : 'Créer cet événement' }}
             </button>
           </form>
         </section>
